@@ -5,7 +5,16 @@ local api = vim.api
 local vim_cmd = vim.cmd
 local _str = require "term._str"
 
-local M = { cmd = {} }
+local _H = {}
+local M = { cmd = {}, _H = _H }
+
+_H.get_current_para = function()
+  local saved_reg = vim.fn.getreg "a"
+  vim.cmd [[noautocmd sil norm! "ayip]]
+  local ret = vim.fn.getreg "a"
+  vim.fn.setreg("a", saved_reg)
+  return ret
+end
 
 M.cmd.start = function()
   -- local orig_winid = api.nvim_get_current_win()
@@ -38,7 +47,7 @@ M.cmd.start = function()
     { on_stdout = GotOutput, on_stderr = GotOutput, on_exit = JobExit })
   local TextEntered = function()
     p = fn.getcurpos()
-    local text = api.nvim_get_current_line()
+    local text = _H.get_current_para()
     fn.chansend(shell_job, { text, "" })
   end
 
