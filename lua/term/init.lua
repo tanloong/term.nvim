@@ -34,7 +34,8 @@ M.cmd.start = function()
     pcall(api.nvim_win_close, shell_winid, true)
     pcall(api.nvim_buf_delete, shell_bufnr, { force = true })
   end
-  local shell_job = fn.jobstart({ "/bin/sh" }, { on_stdout = GotOutput, on_stderr = GotOutput, on_exit = JobExit })
+  local shell_job = fn.jobstart({ "/usr/bin/sh" },
+    { on_stdout = GotOutput, on_stderr = GotOutput, on_exit = JobExit })
   local TextEntered = function()
     p = fn.getcurpos()
     local text = api.nvim_get_current_line()
@@ -44,7 +45,7 @@ M.cmd.start = function()
   api.nvim_buf_set_name(shell_bufnr, ("shell"):format(tostring(shell_bufnr)))
   api.nvim_set_current_buf(shell_bufnr)
   vim.bo[shell_bufnr].bufhidden = "wipe"
-  vim.bo[shell_bufnr].buftype = "nowrite"
+  vim.bo[shell_bufnr].buftype = "nofile"
   vim.keymap.set({ "n", "i" }, "<c-g><c-g>", TextEntered, { buffer = true, silent = true, nowait = true })
   vim.api.nvim_create_autocmd("BufWipeout", { buffer = shell_bufnr, callback = function() fn.jobstop(shell_job) end })
 end
