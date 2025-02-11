@@ -24,9 +24,6 @@ M.cmd.start = function()
   local p
 
   local GotOutput = function(channel, msg, name)
-    -- go back to normal mode regardless whether is exiting
-    api.nvim_input "<C-\\><C-N>"
-
     -- p is only set to non-nil by TextEntered(), p is nil means the msg is not a response to TextEntered, the shell is exiting, shell window has been closed, msg is empty string, don't pollute other windows
     if p == nil then return end
     local last_line = fn.line "$"
@@ -45,29 +42,39 @@ M.cmd.start = function()
   end
   local shell_job = fn.jobstart({ "/usr/bin/sh" },
     { on_stdout = GotOutput, on_stderr = GotOutput, on_exit = JobExit })
-  local TextEntered = function()
+  local SendPara = function()
     p = fn.getcurpos()
     local text = _H.get_current_para()
     fn.chansend(shell_job, { text, "" })
+    api.nvim_input "<C-\\><C-N>"
+  end
+
+  local SendLine = function()
+    p = fn.getcurpos()
+    local text = api.nvim_get_current_line()
+    fn.chansend(shell_job, { text, "" })
+    api.nvim_input "<C-\\><C-N>"
   end
 
   api.nvim_buf_set_name(shell_bufnr, ("shell"):format(tostring(shell_bufnr)))
   api.nvim_set_current_buf(shell_bufnr)
   vim.bo[shell_bufnr].bufhidden = "wipe"
   vim.bo[shell_bufnr].buftype = "nofile"
-  vim.keymap.set({ "n", "i" }, "<c-g><c-g>", TextEntered, { buffer = true, silent = true, nowait = true })
+  vim.keymap.set({ "n", "i" }, "<c-g><c-g>", SendLine, { buffer = true, silent = true, nowait = true })
+  vim.keymap.set({ "n", "i" }, "<c-g><c-p>", SendPara, { buffer = true, silent = true, nowait = true })
   vim.api.nvim_create_autocmd("BufWipeout", { buffer = shell_bufnr, callback = function() fn.jobstop(shell_job) end })
 end
 
 M.cmd.reload = function()
   local pkg_name = "term"
+  local len = #pkg_name
   for k, _ in pairs(package.loaded) do
-    if k:sub(1, #pkg_name) == pkg_name then
+    if k:sub(1, len) == pkg_name then
       package.loaded[k] = nil
     end
   end
   require(pkg_name)
-  vim.print(("%s restarted at %s"):format(pkg_name, os.date "%H:%M:%S"))
+  vim.print(("%s reloaded at %s"):format(pkg_name, os.date "%H:%M:%S"))
 end
 
 api.nvim_create_user_command("Term", function(a)
